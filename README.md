@@ -4,7 +4,12 @@
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=the123saurav_pigdb&metric=bugs)](https://sonarcloud.io/summary/new_code?id=the123saurav_pigdb)
 
 # pigdb
-A toy embedded relational embedded database.
+A toy embedded relational database.
+
+## Supported Grammar Plan 
+- Create Table to create with only primary index and non-null integer keys
+- Simple INSERTs to add 1 record
+- Simpe SELECTs with upto 1 WHERE clause.
 
 ## Local Development
 
