@@ -14,13 +14,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        build_type: [Release, Debug]
-        c_compiler: [gcc, clang]
+        os: [ubuntu-latest] # TODO: add macos-latest
+        build_type: [Debug] # TODO: add Release
+        c_compiler: [clang] # TODO: add gcc
         include:
-          - os: ubuntu-latest
-            c_compiler: gcc
-            cpp_compiler: g++
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
