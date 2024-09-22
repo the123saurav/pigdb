@@ -13,8 +13,8 @@
 namespace Pig {
     namespace Core {
 
-#define PAGE_SIZE_KB 4
-#define MAX_PAGES 32768
+        constexpr uint8_t  PAGE_SIZE_KB = 4;
+        constexpr uint16_t MAX_PAGES    = 32768;
 
         using PageId       = uint16_t;
         using PageSlot     = uint16_t;
