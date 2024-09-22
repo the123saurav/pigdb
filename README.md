@@ -1,3 +1,8 @@
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=the123saurav_pigdb&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=the123saurav_pigdb)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=the123saurav_pigdb&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=the123saurav_pigdb)
+[![Technical Debt](https://sonarcloud.io/api/project_badges/measure?project=the123saurav_pigdb&metric=sqale_index)](https://sonarcloud.io/summary/new_code?id=the123saurav_pigdb)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=the123saurav_pigdb&metric=bugs)](https://sonarcloud.io/summary/new_code?id=the123saurav_pigdb)
+
 # pigdb
 A toy embedded relational embedded database.
 
