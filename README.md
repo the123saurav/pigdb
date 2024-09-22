@@ -88,3 +88,8 @@ tuple right now.
 
 - Note there is no support for double write buffer right now.
 
+### Index File
+
+
+
+
