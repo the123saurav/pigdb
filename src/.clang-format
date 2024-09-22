@@ -1,0 +1,9 @@
+BasedOnStyle: LLVM
+IndentWidth: 4                      # Set indentation width to 4 spaces
+ContinuationIndentWidth: 4           # Indentation for line continuations
+NamespaceIndentation: All            # Indent the contents of namespaces
+AlignConsecutiveAssignments: true  # Align variable assignments in a vertical block
+AlignConsecutiveDeclarations: true # Align variable declarations in a vertical block
+BreakBeforeBraces: Attach          # Keep braces attached to control statements (e.g., if, while)
+AllowShortFunctionsOnASingleLine: Inline
+AlwaysBreakAfterReturnType: None
