@@ -1,0 +1,80 @@
+# This workflow is for a CMake project running on multiple platforms with vcpkg for dependency management and pkg-config, autoconf, automake.
+name: CMake on Linux and MacOS with vcpkg and additional dependencies
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        build_type: [Release, Debug]
+        c_compiler: [gcc, clang]
+        include:
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+          - os: ubuntu-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+          - os: macos-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+        exclude:
+          - os: macos-latest
+            c_compiler: gcc
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable variables
+      id: vars
+      shell: bash
+      run: |
+        echo "build_dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        echo "vcpkg_dir=${{ github.workspace }}/vcpkg" >> "$GITHUB_OUTPUT"
+
+    - name: Install Dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake curl unzip pkg-config autoconf automake
+
+    - name: Install Dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install cmake curl unzip pkg-config autoconf automake
+
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git ${{ steps.vars.outputs.vcpkg_dir }}
+        ${{ steps.vars.outputs.vcpkg_dir }}/bootstrap-vcpkg.sh
+
+    - name: Install Dependencies with vcpkg
+      run: |
+        ${{ steps.vars.outputs.vcpkg_dir }}/vcpkg install
+      env:
+        VCPKG_ROOT: ${{ steps.vars.outputs.vcpkg_dir }}
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{ steps.vars.outputs.build_dir }} \
+              -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+              -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+              -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+              -DCMAKE_TOOLCHAIN_FILE=${{ steps.vars.outputs.vcpkg_dir }}/scripts/buildsystems/vcpkg.cmake \
+              -S ${{ github.workspace }}
+
+    - name: Build
+      run: cmake --build ${{ steps.vars.outputs.build_dir }} --config ${{ matrix.build_type }}
+
+    - name: Run Tests
+      working-directory: ${{ steps.vars.outputs.build_dir }}
+      run: ctest --output-on-failure --config ${{ matrix.build_type }}
