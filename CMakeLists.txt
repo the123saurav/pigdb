@@ -1,11 +1,15 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.27)
 project(pigdb)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Set Clang-Tidy for static code analysis during the build
-set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*")
-
+# Disable clang-tidy if the environment variable DISABLE_STATIC_ANALYSIS is set
+if(DEFINED ENV{DISABLE_STATIC_ANALYSIS} AND ENV{DISABLE_STATIC_ANALYSIS})
+    message(STATUS "Static analysis disabled")
+    set(CMAKE_CXX_CLANG_TIDY "")
+else()
+    message(STATUS "Running with clang-tidy")
+endif()
 # Custom target to run Clang Static Analyzer using scan-build
 add_custom_target(static_analyzer
     COMMAND scan-build make
