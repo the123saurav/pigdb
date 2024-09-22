@@ -2,7 +2,9 @@
 #define PIGDB_CORE_HEAP_H
 
 #include <bitset>
+#include <iterator>
 #include <memory>
+#include <new>
 #include <sys/uio.h>
 
 #include "error.h"
@@ -11,16 +13,16 @@
 namespace Pig {
     namespace Core {
 
-#define PAGE_SIZE_KB 4
-#define MAX_PAGES 32768
+        constexpr uint8_t  PAGE_SIZE_KB = 4;
+        constexpr uint16_t MAX_PAGES    = 32768;
 
-        using PageId       = size_t;
+        using PageId       = uint16_t;
         using PageSlot     = uint16_t;
         using TupleId      = std::pair<PageId, PageSlot>;
         using PageSizeType = uint16_t;
 
         class HeapFile {
-          private:
+          public:
             // Make sure fields are aligned.
             struct Header {
                 // Compression type for pages, note that header is uncompressed.
@@ -32,12 +34,23 @@ namespace Pig {
 
             // Make sure fields are aligned.
             struct Page {
+                static constexpr PageSizeType FREE_BYTES =
+                    PAGE_SIZE_KB * 1024 - sizeof(PageId) - sizeof(PageSlot) -
+                    sizeof(PageSizeType);
+
                 const PageId k_pageId;
                 PageSlot     m_numSlots;
-                PageSizeType m_freeBytes;
+                PageSizeType m_freeBytes = FREE_BYTES;
                 // Fat pointer storing tupleoffset and length
-                uint32_t *m_slotArray;
+                unsigned char m_buffer[FREE_BYTES];
+
+                explicit Page(PageId pageId)
+                    : k_pageId{pageId}, m_numSlots{0} {}
             };
+
+            static_assert(
+                sizeof(Page) == PAGE_SIZE_KB * 1024,
+                "Page struct size does not match expected page size.");
 
             // Make sure fields are aligned.
             struct Tuple {
@@ -45,7 +58,21 @@ namespace Pig {
                 uint8_t *m_payload;
             };
 
+          private:
+            Header m_header;
+            Page  *m_pages;
+
+            HeapFile();
+
           public:
+            HeapFile(const HeapFile &) = delete;
+            HeapFile(HeapFile &&)      = delete;
+
+            HeapFile *operator=(const HeapFile &) = delete;
+            HeapFile *operator=(HeapFile &&)      = delete;
+
+            ~HeapFile();
+
             /**
              *
              * Create a uniquely owned HeapFile.
@@ -53,7 +80,7 @@ namespace Pig {
              */
             [[nodiscard]] static std::unique_ptr<HeapFile> create();
 
-            std::shared_ptr<Page> getPage(PageId pageId);
+            Page *getPage(PageId pageId) const noexcept;
 
             /**
              * Assigns a tuple to a page slot in heap.

@@ -37,3 +37,4 @@ vcpkg_installed/
 
 # IDE
 .vscode/
+.cache/
