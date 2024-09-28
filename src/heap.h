@@ -7,44 +7,38 @@
 #include <new>
 #include <sys/uio.h>
 
+#include "core.h"
+#include "disk-manager.h"
 #include "error.h"
 #include "util.h"
 
 namespace Pig {
     namespace Core {
 
-        constexpr uint8_t  PAGE_SIZE_KB = 4;
-        constexpr uint16_t MAX_PAGES    = 32768;
-
-        using PageId       = uint16_t;
-        using PageSlot     = uint16_t;
-        using TupleId      = std::pair<PageId, PageSlot>;
-        using PageSizeType = uint16_t;
+        using PageSlot = uint16_t;
+        using TupleId  = std::pair<page_id_t, PageSlot>;
 
         class HeapFile {
           public:
             // Make sure fields are aligned.
             struct Header {
                 // Compression type for pages, note that header is uncompressed.
-                CompressionType        m_compression = CompressionType::NONE;
-                std::bitset<MAX_PAGES> m_lessThan33UsedPages;
-                std::bitset<MAX_PAGES> m_lessThan66UsedPages;
-                std::bitset<MAX_PAGES> m_lessThan100UsedPages;
+                CompressionType m_compression = CompressionType::NONE;
             };
 
             // Make sure fields are aligned.
             struct Page {
-                static constexpr PageSizeType FREE_BYTES =
-                    PAGE_SIZE_KB * 1024 - sizeof(PageId) - sizeof(PageSlot) -
-                    sizeof(PageSizeType);
+                static constexpr page_size_t FREE_BYTES =
+                    PAGE_SIZE_KB * 1024 - sizeof(page_id_t) - sizeof(PageSlot) -
+                    sizeof(page_size_t);
 
-                const PageId k_pageId;
-                PageSlot     m_numSlots;
-                PageSizeType m_freeBytes = FREE_BYTES;
+                const page_id_t k_pageId;
+                PageSlot        m_numSlots;
+                page_size_t     m_freeBytes = FREE_BYTES;
                 // Fat pointer storing tupleoffset and length
                 unsigned char m_buffer[FREE_BYTES];
 
-                explicit Page(PageId pageId)
+                explicit Page(page_id_t pageId)
                     : k_pageId{pageId}, m_numSlots{0} {}
             };
 
@@ -59,10 +53,17 @@ namespace Pig {
             };
 
           private:
+            IoId_t m_id;
             Header m_header;
-            Page  *m_pages;
+            // Below fields are stored in separate pages
+            std::bitset<MAX_PAGES> m_lessThan33UsedPages;
+            std::bitset<MAX_PAGES> m_lessThan66UsedPages;
+            std::bitset<MAX_PAGES> m_lessThan100UsedPages;
 
-            HeapFile();
+            Page                        *m_pages;
+            std::shared_ptr<DiskManager> m_diskManager;
+
+            HeapFile(std::shared_ptr<DiskManager> diskManager);
 
           public:
             HeapFile(const HeapFile &) = delete;
@@ -71,16 +72,15 @@ namespace Pig {
             HeapFile *operator=(const HeapFile &) = delete;
             HeapFile *operator=(HeapFile &&)      = delete;
 
-            ~HeapFile();
-
             /**
              *
              * Create a uniquely owned HeapFile.
              * Note that current it does not grow.
              */
-            [[nodiscard]] static std::unique_ptr<HeapFile> create();
+            [[nodiscard]] static std::unique_ptr<HeapFile>
+            create(std::shared_ptr<DiskManager> diskManager);
 
-            Page *getPage(PageId pageId) const noexcept;
+            Page *getPage(page_id_t pageId) const noexcept;
 
             /**
              * Assigns a tuple to a page slot in heap.
