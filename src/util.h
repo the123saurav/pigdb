@@ -9,7 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <signal.h>
-#include <sys/_types/_iovec_t.h>
+#include <sys/uio.h>
 
 namespace Pig {
     namespace Core {
