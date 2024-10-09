@@ -2,8 +2,8 @@
 #define PIG_CORE_LOCK_FREE_STACK_H
 
 #include "spdlog/spdlog.h"
-#include <_types/_uint64_t.h>
 #include <atomic>
+#include <cstdint>
 #include <string>
 #include <utility>
 
@@ -13,37 +13,46 @@ namespace Pig {
 
         using NodeAndGen = uint64_t;
 
+        /**
+            The first 16 bits store a monotonic wrapping int
+            for ABA problem preventing updating top with wrong
+            value.
+         */
         template <typename E> class LockFreeStack {
           public:
             LockFreeStack() : m_top{0} {}
 
             void push(E e) {
-                Node *n = new Node(std::move(e));
-                // Get last 48 bits.
-                uint64_t pointerValue = reinterpret_cast<uint64_t>(n);
+                // Okay to fail at allocation.
+                auto     n            = std::make_unique<Node>(std::move(e));
+                uint64_t pointerValue = reinterpret_cast<uint64_t>(n.get());
 
                 // get copy of top
                 uint64_t top = m_top;
                 n->m_prev    = reinterpret_cast<Node *>(top & 0xFFFFFFFFFFFF);
 
-                uint64_t incrementedTop =
-                    ((top >> 48) + 1)
-                    << 48; // Increment and shift back to upper 16 bits
+                uint16_t incrementedTop =
+                    (static_cast<uint16_t>(top >> 48) +
+                     1); // Increment and shift back to upper 16 bits
 
                 // Step 3: Combine the incremented upper 16 bits with the
                 // pointer value in the lower 48 bits
-                uint64_t newTop = incrementedTop | pointerValue;
+                uint64_t newTop =
+                    static_cast<uint64_t>(incrementedTop) << 48 | pointerValue;
 
                 while (!m_top.compare_exchange_strong(top, newTop)) {
                     // If the exchange fails, reload the expected value and
                     // recompute newTop
                     top            = m_top.load();
-                    incrementedTop = ((top >> 48) + 1) << 48;
-                    newTop         = incrementedTop | pointerValue;
+                    incrementedTop = static_cast<uint16_t>(top >> 48) + 1;
+                    newTop = static_cast<uint64_t>(incrementedTop) << 48 |
+                             pointerValue;
                     n->m_prev = reinterpret_cast<Node *>(top & 0xFFFFFFFFFFFF);
                 }
+
                 spdlog::debug("Pushed {} to stack and prev is {}", e,
                               n->m_prev == 0 ? 0 : n->m_prev->m_val);
+                n.release(); // Managed by stack now
             }
 
             bool pop(E *e) {
@@ -56,12 +65,13 @@ namespace Pig {
                     return false;
                 }
 
-                uint64_t incrementedTop =
-                    ((top >> 48) + 1)
-                    << 48; // Increment and shift back to upper 16 bits
+                uint16_t incrementedTop =
+                    static_cast<uint16_t>(top >> 48) +
+                    1; // Increment and shift back to upper 16 bits
 
-                uint64_t newTop = incrementedTop | reinterpret_cast<uint64_t>(
-                                                       pointerValue->m_prev);
+                uint64_t newTop =
+                    static_cast<uint64_t>(incrementedTop) << 48 |
+                    reinterpret_cast<uint64_t>(pointerValue->m_prev);
 
                 while (!m_top.compare_exchange_strong(top, newTop)) {
                     // If the exchange fails, reload the expected value and
@@ -73,10 +83,12 @@ namespace Pig {
                     if (pointerValue == 0) {
                         return false;
                     }
-                    incrementedTop = ((top >> 48) + 1) << 48;
-                    newTop         = incrementedTop |
+                    incrementedTop = static_cast<uint16_t>(top >> 48) + 1;
+                    newTop = static_cast<uint64_t>(incrementedTop) << 48 |
                              reinterpret_cast<uint64_t>(pointerValue->m_prev);
                 }
+                // Use caller supplied memory as we do not want to fail now as
+                // we have popped, hence no allocation.
                 *e = pointerValue->m_val;
                 spdlog::debug("Popped {} from stack and top is now {}", *e,
                               pointerValue->m_prev == 0

@@ -24,7 +24,6 @@ ENDIF()
 # Compiler and linker flags
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
 
 # Define the source files for the executable (only .cpp files)
 file(GLOB_RECURSE PIGDB_SRC "src/*.cpp")
