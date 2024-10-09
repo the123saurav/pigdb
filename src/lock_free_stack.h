@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace Pig {
@@ -19,6 +20,16 @@ namespace Pig {
             value.
          */
         template <typename E> class LockFreeStack {
+            static_assert(std::is_move_constructible_v<E>,
+                          "E must be move constructible.");
+            static_assert(std::is_move_assignable_v<E>,
+                          "E must be move assignable.");
+
+            static_assert(std::is_nothrow_copy_constructible_v<E>,
+                          "E must have a noexcept copy constructor.");
+            static_assert(std::is_nothrow_copy_assignable_v<E>,
+                          "E must have a noexcept copy assignment operator.");
+
           public:
             LockFreeStack() : m_top{0} {}
 
@@ -89,6 +100,7 @@ namespace Pig {
                 }
                 // Use caller supplied memory as we do not want to fail now as
                 // we have popped, hence no allocation.
+                // Note that copy assignment cant throw here
                 *e = pointerValue->m_val;
                 spdlog::debug("Popped {} from stack and top is now {}", *e,
                               pointerValue->m_prev == 0
