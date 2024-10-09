@@ -2,13 +2,38 @@ cmake_minimum_required(VERSION 3.27)
 project(pigdb)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Integrate vcpkg toolchain file if not already done
+if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND EXISTS "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_TOOLCHAIN_FILE "${CMAKE_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "Vcpkg toolchain file")
+endif()
+
+# assume built-in pthreads on MacOS, to keep cmake happy
+IF(APPLE)
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ENDIF()
+
+
+# Compiler and linker flags
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++")
 
 # Define the source files for the executable (only .cpp files)
 file(GLOB_RECURSE PIGDB_SRC "src/*.cpp")
 
 # Define the header files (only .h files)
 file(GLOB_RECURSE PIGDB_HEADER "src/*.h" "include/*.h")
+
+# Add your source code directories (optional if you have subdirectories)
+add_subdirectory(src)
 
 # Disable clang-tidy if the environment variable DISABLE_STATIC_ANALYSIS is set
 if(DEFINED ENV{DISABLE_STATIC_ANALYSIS} AND ENV{DISABLE_STATIC_ANALYSIS})
@@ -40,11 +65,11 @@ add_custom_target(analyze
     COMMENT "Running Clang Static Analyzer..."
 )
 
+# FetchContent module for external dependencies
 include(FetchContent)
 
 # Find and link spdlog
 find_package(spdlog CONFIG REQUIRED)
-
 # Find and link fmt
 find_package(fmt CONFIG REQUIRED)
 
@@ -62,8 +87,34 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 # Define the pigdb target
 add_executable(pigdb ${PIGDB_SRC})
 
-# Now link libraries to the pigdb target
+# Link libraries to the pigdb target
 target_link_libraries(pigdb PRIVATE spdlog::spdlog fmt::fmt ${JEMALLOC_LIBRARIES})
 
-# Add your source code directories (optional if you have subdirectories)
-add_subdirectory(src)
+# Include jemalloc directories for the target
+target_include_directories(pigdb PRIVATE ${JEMALLOC_INCLUDE_DIRS})
+
+# Include directories for the pigdb target
+target_include_directories(pigdb PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/include)
+
+# Make sure we link against jemalloc library directories
+link_directories(${JEMALLOC_LIBRARY_DIRS})
+
+# Google Test Integration
+# Add Google Test as a dependency for unit testing
+find_package(GTest CONFIG REQUIRED)
+
+# Create the test executable
+file(GLOB TEST_SOURCES "${CMAKE_SOURCE_DIR}/test/*.cpp")
+
+add_executable(pigdb_tests ${TEST_SOURCES})
+
+# Link Google Test libraries to the test executable
+target_link_libraries(pigdb_tests PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main spdlog::spdlog fmt::fmt ${JEMALLOC_LIBRARIES})
+
+# Add test directories to include path
+target_include_directories(pigdb_tests PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/include)
+
+# Enable CTest for running tests
+include(CTest)
+enable_testing()
+add_test(NAME pigdb_tests COMMAND pigdb_tests --gtest_output=xml:test_results.xml)
