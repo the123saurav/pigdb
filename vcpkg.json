@@ -1,11 +1,11 @@
 {
-    "name": "pigdb",
-    "version": "0.1",
-    "dependencies": [
-      "spdlog",
-      "fmt",
-      "jemalloc"   
-    ],
-    "builtin-baseline" : "e85eecfb39341bd8a76952b33b606a083cdeab1c"
-  }
-  
+  "name": "pigdb",
+  "version": "0.1",
+  "dependencies": [
+    "spdlog",
+    "fmt",
+    "jemalloc",
+    "gtest"
+  ],
+  "builtin-baseline": "e85eecfb39341bd8a76952b33b606a083cdeab1c"
+}
