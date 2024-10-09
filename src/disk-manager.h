@@ -4,12 +4,11 @@
 #include "core.h"
 #include "error.h"
 #include "util.h"
-#include <_types/_uint16_t.h>
-#include <_types/_uint64_t.h>
 #include <array>
 #include <atomic>
+#include <cstdint>
 #include <mutex>
-#include <sys/_types/_iovec_t.h>
+#include <sys/uio.h>
 
 namespace Pig {
     namespace Core {

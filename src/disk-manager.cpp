@@ -9,7 +9,6 @@
 #include <cstring>
 #include <mutex>
 #include <new>
-#include <sys/_types/_iovec_t.h>
 
 namespace Pig {
 

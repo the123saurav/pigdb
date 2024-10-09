@@ -1,7 +1,9 @@
 #include "lock_free_stack.h"
 #include <atomic>
 #include <gtest/gtest.h>
+#include <mutex>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 namespace Pig {
@@ -92,21 +94,28 @@ TEST_F(LockFreeStackTest, ConcurrentPushAndPop) {
   LockFreeStack<int> stack;
   const int numThreads = 4;
   const int numOperationsPerThread = 1000;
-  std::atomic<int> totalPoppedElements{0};
+  std::atomic_uint64_t totalPoppedElements{0};
+  std::unordered_set<int> elems;
+  std::mutex m;
+  std::unordered_set<int> popped;
 
   // Function to be run by each thread to push and pop elements
-  auto threadFunc = [&stack, numThreads, numOperationsPerThread,
+  auto threadFunc = [&stack, &elems, &popped, &m,
                      &totalPoppedElements](int mul) {
     for (int i = mul; i < numOperationsPerThread * numThreads;
          i += numThreads) {
+      std::lock_guard<std::mutex> lk{m};
+      elems.insert(i);
       stack.push(i); // Push operation
     }
 
-    int value;
     for (int i = mul; i < numOperationsPerThread * numThreads;
          i += numThreads) {
+      int value;
       if (stack.pop(&value)) { // Pop operation
         ++totalPoppedElements; // Track successful pops
+        std::lock_guard<std::mutex> lk{m};
+        popped.insert(value);
       }
     }
   };
@@ -123,6 +132,7 @@ TEST_F(LockFreeStackTest, ConcurrentPushAndPop) {
   }
 
   // Verify that all operations were successfully performed
+  EXPECT_EQ(popped, elems);
   EXPECT_EQ(totalPoppedElements.load(), numThreads * numOperationsPerThread);
   int remainingValue;
   ASSERT_FALSE(stack.pop(&remainingValue)); // Stack should be empty now
