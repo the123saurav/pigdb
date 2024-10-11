@@ -1,7 +1,7 @@
 #include "buffer_pool.h"
 #include "core.h"
-#include <_types/_uint64_t.h>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <memory>
 #include <mutex>
