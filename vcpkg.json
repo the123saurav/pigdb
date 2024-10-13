@@ -5,7 +5,8 @@
     "spdlog",
     "fmt",
     "jemalloc",
-    "gtest"
+    "gtest",
+    "xxhash"
   ],
   "builtin-baseline": "e85eecfb39341bd8a76952b33b606a083cdeab1c"
 }

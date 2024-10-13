@@ -4,6 +4,7 @@
 #include "error.h"
 #include "fmt/core.h"
 #include "fmt/format.h"
+#include "xxhash.h" // Include the xxhash header
 #include <cstddef>
 #include <cstring>
 #include <iostream>
@@ -60,6 +61,11 @@ namespace Pig {
             std::unique_ptr<unsigned char[]> m_base;
             size_t                           m_len;
         };
+
+        inline uint32_t calculateChecksum(iovec data) {
+            return XXH32(data.iov_base, data.iov_len,
+                         0); // 0 is the seed, change as needed
+        }
 
     } // namespace Core
 } // namespace Pig

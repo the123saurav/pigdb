@@ -11,7 +11,7 @@ if(NOT DEFINED CMAKE_TOOLCHAIN_FILE AND EXISTS "${CMAKE_SOURCE_DIR}/vcpkg/script
         CACHE STRING "Vcpkg toolchain file")
 endif()
 
-# assume built-in pthreads on MacOS, to keep cmake happy
+# Assume built-in pthreads on MacOS, to keep cmake happy
 IF(APPLE)
     set(CMAKE_THREAD_LIBS_INIT "-lpthread")
     set(CMAKE_HAVE_THREADS_LIBRARY 1)
@@ -19,7 +19,6 @@ IF(APPLE)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
 ENDIF()
-
 
 # Compiler and linker flags
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
@@ -40,7 +39,7 @@ if(DEFINED ENV{DISABLE_STATIC_ANALYSIS} AND ENV{DISABLE_STATIC_ANALYSIS})
     set(CMAKE_CXX_CLANG_TIDY "")
 else()
     message(STATUS "Running with clang-tidy")
-    set(CMAKE_CXX_CLANG_TIDY "clang-tidy")  # Ensure clang-tidy is set
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 
     # Find the clang-format executable
     find_program(CLANG_FORMAT "clang-format")
@@ -67,8 +66,12 @@ add_custom_target(analyze
 # FetchContent module for external dependencies
 include(FetchContent)
 
+# Find and include xxhash using vcpkg
+find_package(xxhash CONFIG REQUIRED)
+
 # Find and link spdlog
 find_package(spdlog CONFIG REQUIRED)
+
 # Find and link fmt
 find_package(fmt CONFIG REQUIRED)
 
@@ -87,7 +90,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 add_executable(pigdb ${PIGDB_SRC})
 
 # Link libraries to the pigdb target
-target_link_libraries(pigdb PRIVATE spdlog::spdlog fmt::fmt ${JEMALLOC_LIBRARIES})
+target_link_libraries(pigdb PRIVATE spdlog::spdlog fmt::fmt xxHash::xxhash ${JEMALLOC_LIBRARIES})
 
 # Include jemalloc directories for the target
 target_include_directories(pigdb PRIVATE ${JEMALLOC_INCLUDE_DIRS})
@@ -99,12 +102,10 @@ target_include_directories(pigdb PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_
 link_directories(${JEMALLOC_LIBRARY_DIRS})
 
 # Google Test Integration
-# Add Google Test as a dependency for unit testing
 find_package(GTest CONFIG REQUIRED)
 
 # Create the test executable
 file(GLOB TEST_SOURCES "${CMAKE_SOURCE_DIR}/test/*.cpp")
-
 add_executable(pigdb_tests ${TEST_SOURCES})
 
 # Link Google Test libraries to the test executable
@@ -116,4 +117,6 @@ target_include_directories(pigdb_tests PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_S
 # Enable CTest for running tests
 include(CTest)
 enable_testing()
+
+# Add test to CTest
 add_test(NAME pigdb_tests COMMAND pigdb_tests --gtest_output=xml:test_results.xml)

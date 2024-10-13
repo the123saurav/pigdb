@@ -65,6 +65,14 @@ namespace Pig {
 
                 void markDirty() { m_frame.m_dirty.store(true); }
 
+                iovec getRawPage() {
+                    iovec buf;
+                    buf.iov_base = m_frame.m_page;
+                    buf.iov_len =
+                        sizeof(m_frame.m_page) / sizeof(m_frame.m_page[0]);
+                    return buf;
+                }
+
               private:
                 Frame &m_frame;
             };
